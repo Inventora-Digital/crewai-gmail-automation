@@ -1,0 +1,235 @@
+categorization_task:
+  description: >
+    First, read the fetched emails from the file at 'output/fetched_emails.json' using the `FileReadTool`.
+    
+    For each email, analyze the content and categorize as follows:
+
+    1. Category (choose one):
+       - NEWSLETTERS
+       - PROMOTIONS
+       - PERSONAL
+       - SOCIALS
+       - GITHUB
+       - YOUTUBE
+       - RECEIPTS_INVOICES
+       - OTHER
+
+    2. Priority (choose one):
+      IMPORTANT - BE VERY STRICT WITH PRIORITY LEVELS:
+      - HIGH: ONLY for urgent matters requiring immediate attention or response
+      - MEDIUM: ONLY for important but not urgent communications from real people
+         - DO NOT mark promotional content, newsletters, or automated notifications as MEDIUM
+         - DO NOT mark Shutterfly or other promotional emails as MEDIUM - they should be LOW
+         - Only actual communication from real people can be MEDIUM
+      - LOW
+
+    3. Required Action (choose one):
+       - REPLY
+       - READ_ONLY
+       - TASK
+       - IGNORE
+
+    IMPORTANT YOUTUBE EMAIL RULES:
+    - ANY email from youtube.com domains MUST be categorized as YOUTUBE
+    - ANY email containing "YouTube" in the subject or sender MUST be categorized as YOUTUBE
+    - YouTube emails about comments should be HIGH priority but require READ_ONLY action
+      (the user will reply directly on YouTube, not via email)
+    
+    IMPORTANT FORMAT INSTRUCTIONS:
+    Your final answer must be a valid JSON object with these exact fields(example without the quotes):
+      "email_id": "The email's unique identifier",
+      "subject": "The email's subject line",
+      "sender": "The email sender",
+      "category": "The category you assigned",
+      "priority": "The priority you assigned",
+      "required_action": "The action needed",
+      "date": "The email date in YYYY-MM-DD format",
+      "age_days": "The age of the email in days"
+    
+    Do not include any explanations, thoughts, or additional text outside the JSON object.
+    Do not use markdown formatting or code blocks.
+    Just return the raw JSON object.
+  expected_output: >
+    A single JSON object with a key 'emails' which is a list. Each item in the list
+    should be a JSON object with the following fields: email_id, subject, sender,
+    category (from NEWSLETTERS, PROMOTIONS, PERSONAL, GITHUB, SPONSORSHIPS, RECRUITMENT, COLD_EMAIL, EVENT_INVITATIONS, RECEIPTS_INVOICES, YOUTUBE, SOCIALS),
+    priority (HIGH, MEDIUM, LOW), and required_action (REPLY, READ_ONLY, TASK, IGNORE).
+  agent: categorizer
+  output_file: output/categorization_report.json
+
+organization_task:
+  description: >
+    First, read the categorization report from 'output/categorization_report.json' using the `FileReadTool`.
+    
+    For each email, organize it using Gmail's priority features with the 'organize_email' tool.
+
+    Use the email content, email domain, and categorization report to determine the correct labels.
+    
+    Simplified Label Rules:
+    
+    1. For YOUTUBE emails:
+       - Add "YOUTUBE" label
+       - Star the email
+       - If HIGH priority, also add "URGENT" label
+    
+    2. For NEWSLETTERS emails:
+       - Add "NEWSLETTERS" label
+       - No newsletter is HIGH or MEDIUM priority
+       - No newsletter requires action
+
+    3. For other emails:
+       - Add a label matching the category (e.g., "GITHUB")
+       - If HIGH priority, add "URGENT" label and star the email
+       - If MEDIUM priority, add "ACTION_NEEDED" label
+       - If is notification or no-reply, just set as READ_ONLY and DO NOT answer or create draft
+    
+    4. For other emails:
+       - Add a label matching the category (e.g., "PERSONAL", "OTHERS")
+       - If HIGH priority, add "URGENT" label and star the email
+       - If MEDIUM priority, add "ACTION_NEEDED" label
+    
+    Your final answer should be a JSON object with:
+    - email_id: The email's ID
+    - subject: The email's subject
+    - applied_labels: List of labels applied
+    - starred: Whether the email was starred (true/false)
+    - result: "Success" or error message
+  expected_output: >
+    A detailed report of how each email was organized, including:
+    - The email ID and subject
+    - The labels that were applied
+    - Whether the email was starred
+    - The result of the organization attempt
+
+    The report should include special handling for YOUTUBE and NEWSLETTERS emails to ensure they receive
+    the appropriate labels and priority indicators.
+  agent: organizer
+  context: [categorization_task]
+  output_file: output/organization_report.json
+
+response_task:
+  description: >
+    PLAN ONLY. Do not call any tools.
+    Based on the categorization report, generate responses ONLY for emails that require action.
+
+    Only generate responses for:
+    - PERSONAL emails with HIGH or MEDIUM priority
+    - DO NOT generate responses for ANY YouTube emails - the user will respond directly on YouTube instead
+
+    For each response to generate, produce a draft plan with:
+    - email_id
+    - subject: prefix with "Re: "
+    - recipient: extracted from the email context; if unavailable use "user@example.com"
+    - body: the full draft email body
+    - response_summary: short summary of the reply
+    - response_needed: true
+    - draft_saved: false
+
+    Your final answer must be a JSON object with an 'items' array of these drafts.
+    Do not include any extra text, only the JSON object with 'items'.
+  expected_output: >
+    A JSON object with 'items': List[EmailResponse] representing planned draft responses.
+  agent: response_generator
+  context: [categorization_task, organization_task]
+  output_file: output/response_plan.json
+
+response_execute_task:
+  description: >
+    Execute the response plan from the previous task.
+    Read the plan from context and for each item, call the 'save_email_draft' tool with:
+      - subject
+      - body
+      - recipient
+    If available and relevant, pass 'thread_info' too.
+
+    Finally, produce a concise JSON summary with:
+      - drafts_saved: number of drafts saved
+      - errors: list of textual errors encountered (if any)
+  expected_output: >
+    A JSON summary with saved draft count and errors.
+  agent: response_executor
+  context: [response_task]
+  output_file: output/response_report.json
+
+notification_task:
+  description: >
+    Based on the categorization report, send Slack notifications for HIGH priority emails using the 'SlackNotificationTool'.
+    
+    For each HIGH priority email:
+    1. Create a brief summary of the email content
+    2. Identify any action needed
+    3. Create an attention-grabbing headline
+    4. Add an emoji-filled intro
+    
+    Use the 'SlackNotificationTool' with:
+    - subject: The email subject
+    - sender: The email sender
+    - category: The email category (YOUTUBE, PERSONAL, etc.)
+    - priority: HIGH
+    - summary: Your brief summary
+    - action_needed: What action is needed
+    - headline: Your custom headline
+    - intro: Your custom intro with emojis
+    
+    Your final answer should list all notifications sent.
+  expected_output: >
+    A report of which emails had Slack notifications sent, including their subjects, priorities, and the creative elements used.
+    The report should be in correct Markdown format without any additional text or formatting such as "```" or "```md".
+  agent: notifier
+  context: [categorization_task]
+  output_file: output/notification_report.json
+
+cleanup_task:
+  description: >
+    PLAN ONLY. Do not call any tools.
+    From the categorization report, identify LOW priority emails that are safe to delete.
+    Apply the following rules strictly:
+
+    NEVER delete:
+    - ANY email marked as HIGH or MEDIUM priority
+    - ANY email from a personal contact
+    - ANY email related to YouTube
+    - ANY email less than 5 days old (age_days < 5)
+
+    ALWAYS delete:
+    - ANY email with "Shutterfly" in the sender or subject
+    - ANY email categorized as PROMOTIONS and older than 2 days
+    - ANY email categorized as SOCIALS
+    - ANY email categorized as NEWSLETTERS and older than 2 days
+
+    For each email, decide whether it should be deleted and provide a clear reason.
+    Your final answer must be a JSON object with an 'items' key whose value is an array.
+    Each item must include exactly:
+      - email_id
+      - subject
+      - sender
+      - age_days
+      - deleted (true if should be deleted, false otherwise)
+      - reason (why delete or preserve)
+    Do not include extra text, only the JSON object with 'items'.
+  expected_output: >
+    A JSON object with 'items': List[EmailCleanupInfo] decisions containing 'deleted' and 'reason'.
+  agent: cleaner
+  context: [categorization_task, organization_task]
+  output_file: output/cleanup_plan.json
+
+cleanup_execute_task:
+  description: >
+    Execute the cleanup plan from the previous task.
+    Read the plan from context and for each item with deleted=true, call the 'delete_email' tool
+    using ONLY the required fields as a JSON object:
+      - email_id
+      - reason
+
+    After processing all deletions, call 'empty_gmail_trash' to permanently remove messages.
+
+    Finally, produce a concise JSON summary with:
+      - deleted_count: number of successfully deleted emails
+      - preserved_count: number of preserved emails
+      - trash_status: result of emptying trash
+      - errors: list of textual errors encountered (if any)
+  expected_output: >
+    A JSON summary of actions performed and trash status.
+  agent: cleanup_executor
+  context: [cleanup_task]
+  output_file: output/cleanup_report.json

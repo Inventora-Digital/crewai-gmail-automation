@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gmail Crew AI</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">Gmail Crew AI</div>
+      <div class="health" id="health-indicator">Checking…</div>
+    </header>
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>New Run</h2>
+          <form id="run-form">
+            <div class="field">
+              <label for="email">Email Address</label>
+              <input id="email" name="email" type="email" placeholder="you@gmail.com" required />
+            </div>
+            <div class="field">
+              <label for="app_password">App Password</label>
+              <input id="app_password" name="app_password" type="password" placeholder="16-character app password" required />
+              <small>Use a Gmail App Password. Do not use your main password.</small>
+            </div>
+            <div class="field-inline">
+              <div>
+                <label for="email_limit">Emails</label>
+                <input id="email_limit" name="email_limit" type="number" min="1" value="5" />
+              </div>
+              <div class="actions">
+                <button type="submit">Start Run</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>Runs</h2>
+          <div id="runs-list" class="runs-list"></div>
+        </section>
+      </aside>
+
+      <section class="content">
+        <div class="tabs">
+          <button class="tab active" data-tab="logs">Logs</button>
+          <button class="tab" data-tab="outputs">Outputs</button>
+          <button class="tab" data-tab="status">Status</button>
+          <button class="tab" data-tab="summary">Summary</button>
+        </div>
+
+        <div class="tabcontent active" id="tab-logs">
+          <div class="toolbar">
+            <div>Selected Run: <code id="selected-run">—</code></div>
+            <div class="spacer"></div>
+            <label class="checkbox"><input type="checkbox" id="autoscroll" checked /> Autoscroll</label>
+            <button id="copy-logs">Copy Logs</button>
+          </div>
+          <pre id="logs" class="logs"></pre>
+        </div>
+
+        <div class="tabcontent" id="tab-outputs">
+          <div class="split">
+            <div class="left">
+              <div class="toolbar">
+                <div>Latest Output Files</div>
+                <div class="spacer"></div>
+                <button id="refresh-output">Refresh</button>
+              </div>
+              <ul id="output-files" class="filelist"></ul>
+            </div>
+            <div class="right">
+              <div class="toolbar">
+                <div id="output-name">Select a file…</div>
+              </div>
+              <pre id="output-view" class="json"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabcontent" id="tab-status">
+          <div class="status-grid" id="status-grid">
+            <div class="status-item"><div class="label">Runs</div><div class="value" id="stat-runs">0</div></div>
+            <div class="status-item"><div class="label">Active</div><div class="value" id="stat-active">0</div></div>
+            <div class="status-item"><div class="label">Completed</div><div class="value" id="stat-completed">0</div></div>
+            <div class="status-item"><div class="label">Failed</div><div class="value" id="stat-failed">0</div></div>
+          </div>
+        </div>
+
+        <div class="tabcontent" id="tab-summary">
+          <div class="summary-grid">
+            <section class="panel">
+              <h2>Deleted Emails</h2>
+              <ul id="sum-deleted" class="bullet-list"></ul>
+            </section>
+            <section class="panel">
+              <h2>Read Only</h2>
+              <ul id="sum-readonly" class="bullet-list"></ul>
+            </section>
+            <section class="panel">
+              <h2>Drafts</h2>
+              <ul id="sum-drafts" class="bullet-list"></ul>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
