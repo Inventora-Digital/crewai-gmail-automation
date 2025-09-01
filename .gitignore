@@ -50,4 +50,5 @@ Thumbs.db
 .github/instructions/codacy.instructions.md
 
 
+# Ignore Firebase admin SDK key
 agentic-mail-manager-firebase-adminsdk-fbsvc-645d5291df.json
