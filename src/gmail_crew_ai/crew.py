@@ -133,7 +133,8 @@ class GmailCrewAi():
         return Agent(
             # Use a dedicated executor profile for imperative tool usage
             config=self.agents_config.get('cleanup_executor', self.agents_config['cleaner']),
-            tools=[GmailDeleteTool(), EmptyTrashTool()],
+            # tools=[GmailDeleteTool(), EmptyTrashTool()],
+            tools=[GmailDeleteTool()],
             llm=self.llm,
         )
 

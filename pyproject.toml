@@ -9,6 +9,10 @@ dependencies = [
     "crewai[tools]>=0.102.0,<1.0.0",
     "fastapi>=0.111.0",
     "uvicorn>=0.29.0",
+    "firebase-admin>=6.5.0",
+    "google-cloud-firestore>=2.16.0",
+    "google-cloud-secret-manager>=2.20.2",
+    "google-cloud-kms>=2.24.0",
 ]
 
 [project.scripts]

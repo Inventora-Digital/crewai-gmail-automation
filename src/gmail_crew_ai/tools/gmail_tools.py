@@ -268,14 +268,46 @@ class SaveDraftTool(BaseTool):
     args_schema: Type[BaseModel] = SaveDraftSchema
 
     def _format_body(self, body: str) -> str:
-        """Format the email body with signature."""
-        # Replace [Your name] or [Your Name] with Tony Kipkemboi
-        body = re.sub(r'\[Your [Nn]ame\]', 'Tony Kipkemboi', body)
-        
-        # If no placeholder was found, append the signature
-        if '[Your' not in body and '[your' not in body:
-            body = f"{body}\n\nBest regards,\nTony Kipkemboi"
-        
+        """Format the email body with a dynamic signature.
+        Signature is determined by env vars:
+        - SIGNATURE_NAME: preferred display name
+        - EMAIL_SIGNATURE: full signature block; if set to empty string, disables auto-append
+        Fallback: "Best regards,\n<SIGNATURE_NAME or email local-part>"
+        """
+        signature_name = os.getenv("SIGNATURE_NAME")
+        email_address = os.getenv("EMAIL_ADDRESS", "")
+        if not signature_name and email_address:
+            try:
+                local = email_address.split("@", 1)[0]
+                signature_name = local.replace(".", " ").replace("_", " ").title()
+            except Exception:
+                signature_name = None
+
+        # Replace [Your name] placeholder
+        if signature_name:
+            body = re.sub(r"\[Your [Nn]ame\]", signature_name, body)
+
+        # Determine signature block
+        sig_env = os.getenv("EMAIL_SIGNATURE")
+        if sig_env is not None:
+            # If explicitly set (even to empty), respect it
+            if sig_env == "":
+                return body
+            signature_block = sig_env
+        else:
+            # Default signature if none provided
+            if signature_name:
+                signature_block = f"Best regards,\n{signature_name}"
+            else:
+                signature_block = None
+
+        # Append signature if not already present
+        if signature_block:
+            normalized = body.strip()
+            if signature_block not in normalized:
+                body = f"{normalized}\n\n{signature_block}"
+            else:
+                body = normalized
         return body
 
     def _connect(self):

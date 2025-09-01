@@ -9,6 +9,12 @@
   <body>
     <header class="topbar">
       <div class="brand">Gmail Crew AI</div>
+      <div class="spacer"></div>
+      <div id="user-info" class="user-info">
+        <span id="user-email" class="muted">Not signed in</span>
+        <button id="btn-signin" class="secondary">Sign In</button>
+        <button id="btn-signout" class="secondary" style="display:none;">Sign Out</button>
+      </div>
       <div class="health" id="health-indicator">Checking…</div>
     </header>
     <main class="layout">
@@ -16,6 +22,11 @@
         <section class="panel">
           <h2>New Run</h2>
           <form id="run-form">
+            <label class="checkbox-row" title="Use saved credentials from your account if available">
+              <input id="use-saved" type="checkbox" checked>
+              <span>Use saved settings</span>
+              <span id="saved-indicator" class="chip muted" style="margin-left:auto;">Unknown</span>
+            </label>
             <div class="field">
               <label for="email">Email Address</label>
               <input id="email" name="email" type="email" placeholder="you@gmail.com" required />
@@ -38,6 +49,29 @@
         </section>
 
         <section class="panel">
+          <h2>Settings</h2>
+          <div class="field">
+            <label for="settings-email">Email Address</label>
+            <input id="settings-email" type="email" placeholder="you@gmail.com" />
+          </div>
+          <div class="field">
+            <label for="settings-app-password">App Password (Gmail)</label>
+            <input id="settings-app-password" type="password" placeholder="16-char app password" />
+          </div>
+          <div class="field">
+            <label for="settings-signature-name">Signature Name</label>
+            <input id="settings-signature-name" type="text" placeholder="Your Name" />
+          </div>
+          <div class="field">
+            <label for="settings-signature">Signature Block</label>
+            <textarea id="settings-signature" rows="3" placeholder="Best regards,
+Your Name"></textarea>
+          </div>
+          <div class="actions"><button id="btn-save-settings">Save Settings</button></div>
+          <small class="muted">Signed-in users can store settings securely (email + secret in Secret Manager).</small>
+        </section>
+
+        <section class="panel">
           <h2>Runs</h2>
           <div id="runs-list" class="runs-list"></div>
         </section>
@@ -55,8 +89,12 @@
           <div class="toolbar">
             <div>Selected Run: <code id="selected-run">—</code></div>
             <div class="spacer"></div>
+            <input id="log-filter" class="input-sm" placeholder="Filter logs (regex supported)" />
+            <label class="checkbox"><input type="checkbox" id="wrap-logs" checked /> Wrap</label>
+            <label class="checkbox"><input type="checkbox" id="pause-logs" /> Pause</label>
             <label class="checkbox"><input type="checkbox" id="autoscroll" checked /> Autoscroll</label>
-            <button id="copy-logs">Copy Logs</button>
+            <button id="clear-logs" class="secondary">Clear</button>
+            <button id="copy-logs">Copy</button>
           </div>
           <pre id="logs" class="logs"></pre>
         </div>
@@ -92,15 +130,15 @@
         <div class="tabcontent" id="tab-summary">
           <div class="summary-grid">
             <section class="panel">
-              <h2>Deleted Emails</h2>
+              <h2>Deleted <span id="count-deleted" class="chip"></span></h2>
               <ul id="sum-deleted" class="bullet-list"></ul>
             </section>
             <section class="panel">
-              <h2>Read Only</h2>
-              <ul id="sum-readonly" class="bullet-list"></ul>
+              <h2>Not Deleted <span id="count-notdeleted" class="chip"></span></h2>
+              <ul id="sum-notdeleted" class="bullet-list"></ul>
             </section>
             <section class="panel">
-              <h2>Drafts</h2>
+              <h2>Drafts <span id="count-drafts" class="chip"></span></h2>
               <ul id="sum-drafts" class="bullet-list"></ul>
             </section>
           </div>
@@ -108,6 +146,9 @@
       </section>
     </main>
 
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="firebase.js"></script>
     <script src="app.js"></script>
   </body>
   </html>

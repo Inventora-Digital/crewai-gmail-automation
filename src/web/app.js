@@ -4,6 +4,10 @@ const $logs = document.getElementById('logs');
 const $selectedRun = document.getElementById('selected-run');
 const $autoscroll = document.getElementById('autoscroll');
 const $copyLogs = document.getElementById('copy-logs');
+const $clearLogs = document.getElementById('clear-logs');
+const $logFilter = document.getElementById('log-filter');
+const $wrapLogs = document.getElementById('wrap-logs');
+const $pauseLogs = document.getElementById('pause-logs');
 const $health = document.getElementById('health-indicator');
 const $tabButtons = document.querySelectorAll('.tab');
 const $tabContents = document.querySelectorAll('.tabcontent');
@@ -12,20 +16,37 @@ const $outputFiles = document.getElementById('output-files');
 const $outputView = document.getElementById('output-view');
 const $outputName = document.getElementById('output-name');
 const $refreshOutput = document.getElementById('refresh-output');
+const $btnSignin = document.getElementById('btn-signin');
+const $btnSignout = document.getElementById('btn-signout');
+const $userEmail = document.getElementById('user-email');
+const $btnSaveSettings = document.getElementById('btn-save-settings');
+const $settingsEmail = document.getElementById('settings-email');
+const $settingsAppPassword = document.getElementById('settings-app-password');
+const $settingsSignatureName = document.getElementById('settings-signature-name');
+const $settingsSignature = document.getElementById('settings-signature');
+const $useSaved = document.getElementById('use-saved');
+const $savedIndicator = document.getElementById('saved-indicator');
 
 let selectedRunId = null;
 const runOffsets = new Map(); // runId -> next log index
+let logsBuffer = []; // in-memory lines for current run
+let logFilterRegex = null;
+let logsPaused = false;
 
 // Summary elements
 const $sumDeleted = document.getElementById('sum-deleted');
-const $sumReadOnly = document.getElementById('sum-readonly');
+const $sumNotDeleted = document.getElementById('sum-notdeleted');
 const $sumDrafts = document.getElementById('sum-drafts');
 
 async function api(path, opts = {}) {
-  const res = await fetch(`/api${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  });
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (window.getIdToken) {
+    try {
+      const t = await window.getIdToken();
+      if (t) headers['Authorization'] = 'Bearer ' + t;
+    } catch {}
+  }
+  const res = await fetch(`/api${path}`, { ...opts, headers });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -75,11 +96,15 @@ async function tailLogs() {
   const nextIdx = runOffsets.get(selectedRunId) || 0;
   try {
     const data = await api(`/runs/${selectedRunId}/logs?start=${nextIdx}`);
+    if (data.status === 'unknown') {
+      toast('Run not found (server may have restarted)');
+      logsPaused = true;
+      return;
+    }
     if (data.lines && data.lines.length) {
-      $logs.textContent += data.lines.join('\n') + '\n';
-      if ($autoscroll.checked) {
-        $logs.scrollTop = $logs.scrollHeight;
-      }
+      // update buffer first
+      logsBuffer.push(...data.lines);
+      renderLogs();
       runOffsets.set(selectedRunId, data.next);
     }
     // update sidebar status color
@@ -102,7 +127,7 @@ $form.addEventListener('submit', async (e) => {
   try {
     const res = await api('/runs', {
       method: 'POST',
-      body: JSON.stringify({ email_address: email, app_password, email_limit }),
+      body: JSON.stringify($useSaved.checked ? { email_limit } : { email_address: email, app_password, email_limit }),
     });
     await refreshRuns();
     selectRun(res.run_id);
@@ -117,6 +142,7 @@ function selectRun(runId) {
   selectedRunId = runId;
   $selectedRun.textContent = runId;
   $logs.textContent = '';
+  logsBuffer = [];
   runOffsets.set(runId, 0);
   Array.from($runsList.children).forEach(el => el.classList.toggle('active', el.dataset.runId === runId));
 }
@@ -126,6 +152,17 @@ $copyLogs.addEventListener('click', async () => {
     await navigator.clipboard.writeText($logs.textContent);
   } catch {}
 });
+
+$clearLogs.addEventListener('click', () => { logsBuffer = []; renderLogs(true); });
+$logFilter.addEventListener('input', () => {
+  const v = $logFilter.value.trim();
+  try { logFilterRegex = v ? new RegExp(v, 'i') : null; } catch { logFilterRegex = null; }
+  renderLogs(true);
+});
+$wrapLogs.addEventListener('change', () => {
+  $logs.style.whiteSpace = $wrapLogs.checked ? 'pre-wrap' : 'pre';
+});
+$pauseLogs.addEventListener('change', () => { logsPaused = $pauseLogs.checked; });
 
 $tabButtons.forEach(btn => btn.addEventListener('click', () => {
   $tabButtons.forEach(b => b.classList.remove('active'));
@@ -179,6 +216,26 @@ async function refreshHealth() {
   }
 }
 
+// Check auth config and disable Sign In if missing
+async function checkAuthConfig() {
+  try {
+    const res = await fetch('/api/firebase-config');
+    if (!res.ok) throw new Error('no config');
+    const cfg = await res.json();
+    const ok = !!cfg.apiKey;
+    if (!ok) {
+      $btnSignin.disabled = true;
+      $userEmail.textContent = 'Auth config missing';
+    } else {
+      $btnSignin.disabled = false;
+      if ($userEmail.textContent === 'Auth config missing') $userEmail.textContent = 'Not signed in';
+    }
+  } catch {
+    $btnSignin.disabled = true;
+    $userEmail.textContent = 'Auth config missing';
+  }
+}
+
 // periodic refresh & tail
 setInterval(refreshRuns, 3000);
 setInterval(tailLogs, 800);
@@ -191,12 +248,117 @@ refreshRuns();
 refreshOutputs();
 refreshHealth();
 refreshSummary();
+checkAuthConfig();
+
+// Auth bindings
+document.addEventListener('auth-changed', async (e) => {
+  const user = e.detail.user;
+  if (user) {
+    $userEmail.textContent = user.displayName ? `${user.displayName} (${user.email})` : user.email || 'Signed in';
+    $btnSignin.style.display = 'none';
+    $btnSignout.style.display = '';
+    // Pre-fill email fields
+    document.getElementById('email').value = user.email || '';
+    // Fetch and apply saved settings, prioritizing them over Firebase defaults if they exist
+    try {
+      const s = await api('/me/settings');
+      if (s.email_address) {
+        $settingsEmail.value = s.email_address;
+      } else {
+        $settingsEmail.value = user.email || ''; // Default to Firebase email if no saved email
+      }
+      if (s.signature_name) {
+        $settingsSignatureName.value = s.signature_name;
+      } else if (user.displayName) {
+        $settingsSignatureName.value = user.displayName; // Default to Firebase display name
+      }
+      if (s.signature) {
+        $settingsSignature.value = s.signature;
+      } else if (user.displayName) {
+        $settingsSignature.value = `Best regards,\n${user.displayName}`; // Default signature
+      }
+      $savedIndicator.textContent = s.has_secret ? 'Saved ✓' : 'No secret';
+    } catch { 
+      $savedIndicator.textContent = 'Unknown';
+      // If fetching settings fails, still try to pre-fill with Firebase user data
+      $settingsEmail.value = user.email || '';
+      if (user.displayName) {
+        $settingsSignatureName.value = user.displayName;
+        $settingsSignature.value = `Best regards,\n${user.displayName}`;
+      }
+    }
+  } else {
+    $userEmail.textContent = 'Not signed in';
+    $btnSignin.style.display = '';
+    $btnSignout.style.display = 'none';
+    $settingsEmail.value = '';
+    document.getElementById('email').value = ''; // Clear email field on logout
+    $settingsSignatureName.value = '';
+    $settingsSignature.value = '';
+    $savedIndicator.textContent = 'Sign in';
+  }
+});
+
+// Ask Firebase to emit current auth state after we registered the listener
+if (window.emitAuthState) {
+  window.emitAuthState();
+} else {
+  setTimeout(() => { window.emitAuthState && window.emitAuthState(); }, 500);
+}
+
+$btnSignin.addEventListener('click', async (e) => {
+  e.preventDefault();
+  if (!window.__AUTH_AVAILABLE) return toast('Auth not configured');
+  try { await window.signInWithGoogle(); }
+  catch (err) { toast(String(err?.message || 'Sign-in failed')); }
+});
+$btnSignout.addEventListener('click', () => window.signOutFirebase && window.signOutFirebase());
+
+$btnSaveSettings.addEventListener('click', async () => {
+  try {
+    await api('/me/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        email_address: $settingsEmail.value.trim() || null,
+        app_password: $settingsAppPassword.value.trim() || null,
+        signature_name: $settingsSignatureName.value.trim() || null,
+        signature: $settingsSignature.value,
+        auth_type: 'app_password',
+      }),
+    });
+    $settingsAppPassword.value = '';
+    toast('Settings saved');
+  } catch (e) {
+    toast('Failed to save settings: ' + e.message);
+  }
+});
+
+$useSaved.addEventListener('change', () => {
+  const disabled = $useSaved.checked;
+  document.getElementById('email').disabled = disabled;
+  document.getElementById('app_password').disabled = disabled;
+});
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function renderLogs(force = false) {
+  if (logsPaused && !force) return;
+  const filtered = logFilterRegex ? logsBuffer.filter(l => logFilterRegex.test(l)) : logsBuffer;
+  $logs.textContent = filtered.join('\n') + (filtered.length ? '\n' : '');
+  if ($autoscroll.checked) $logs.scrollTop = $logs.scrollHeight;
+}
 
 async function refreshSummary() {
   try {
     const data = await api('/summary');
-    renderList($sumDeleted, data.deleted_emails, (it) => `${safe(it.subject)} — ${safe(it.sender)} <span class="meta">(${safe(it.reason) || ''})</span>`);
-    renderList($sumReadOnly, data.read_only, (it) => `${safe(it.subject)} — ${safe(it.sender)} <span class="meta">[${safe(it.category)}/${safe(it.priority)}]</span>`);
+    renderList($sumDeleted, data.deleted, (it) => `${safe(it.subject)} — ${safe(it.sender)} <span class="meta">(${safe(it.reason) || ''})</span>`);
+    renderList($sumNotDeleted, data.not_deleted, (it) => `${safe(it.subject)} — ${safe(it.sender)} <span class="meta">[${safe(it.category) || ''}/${safe(it.priority) || ''}] ${safe(it.reason) || ''}</span>`);
     renderList($sumDrafts, data.drafts, (it) => `${safe(it.subject)} → ${safe(it.recipient)} <span class="meta">${safe(it.response_summary) || ''}</span>`);
   } catch (e) {
     // ignore

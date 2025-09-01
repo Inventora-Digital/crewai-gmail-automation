@@ -114,12 +114,11 @@ response_task:
 
     Only generate responses for:
     - PERSONAL emails with HIGH or MEDIUM priority
-    - DO NOT generate responses for ANY YouTube emails - the user will respond directly on YouTube instead
 
     For each response to generate, produce a draft plan with:
     - email_id
     - subject: prefix with "Re: "
-    - recipient: extracted from the email context; if unavailable use "user@example.com"
+    - recipient: extracted from the email context; if unavailable DO NOT create a draft
     - body: the full draft email body
     - response_summary: short summary of the reply
     - response_needed: true
@@ -135,6 +134,7 @@ response_task:
 
 response_execute_task:
   description: >
+    DO NOT create test Drafts
     Execute the response plan from the previous task.
     Read the plan from context and for each item, call the 'save_email_draft' tool with:
       - subject
@@ -188,12 +188,11 @@ cleanup_task:
     NEVER delete:
     - ANY email marked as HIGH or MEDIUM priority
     - ANY email from a personal contact
-    - ANY email related to YouTube
-    - ANY email less than 5 days old (age_days < 5)
+    - Any email that is related to my clients
 
     ALWAYS delete:
     - ANY email with "Shutterfly" in the sender or subject
-    - ANY email categorized as PROMOTIONS and older than 2 days
+    - ANY email categorized as PROMOTIONS
     - ANY email categorized as SOCIALS
     - ANY email categorized as NEWSLETTERS and older than 2 days
 

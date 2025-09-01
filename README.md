@@ -169,6 +169,12 @@ Features:
 
 See `docs/WEB_APP.md` for details.
 
+## 🧩 API
+
+Programmatically start runs, stream logs, and fetch results using the HTTP API.
+
+- Reference: `docs/API.md`
+
 ## 🌟 Special Features
 
 - **📅 Smart Deletion Rules**: 
@@ -201,3 +207,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Ollama](https://ollama.com/library)
 - [Gemini](https://ai.google.com/gemini-api)
 - [OpenAI](https://openai.com/api/)
+
+## ⬆️ Publish to GitHub
+
+Initialize git, commit, and push to a new GitHub repo (two options):
+
+1) Using GitHub CLI (recommended)
+
+```bash
+git init
+git add -A
+git commit -m "init"
+git branch -M main
+GITHUB_USER=youruser REPO_NAME=crewai-gmail-automation gh repo create "$GITHUB_USER/$REPO_NAME" --private --source=. --push
+```
+
+2) Using the provided script (requires `GITHUB_TOKEN`)
+
+```bash
+git init && git add -A && git commit -m "init" && git branch -M main
+GITHUB_USER=youruser REPO_NAME=crewai-gmail-automation GITHUB_TOKEN=ghp_xxx \
+  ./scripts/create_github_repo.sh
+```
