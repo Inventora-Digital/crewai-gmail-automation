@@ -7,9 +7,6 @@ Gmail Automation with CrewAI is an intelligent email management system that uses
 ![Gmail Automation](./assets/gmail-automation.jpg)
 
 ## ✨ Features
-
-![Stars](https://img.shields.io/github/stars/tonykipkemboi/crewai-gmail-automation?style=social)
-![Last Commit](https://img.shields.io/github/last-commit/tonykipkemboi/crewai-gmail-automation) 
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 
 - **📋 Email Categorization**: Automatically categorizes emails into specific types (newsletters, promotions, personal, etc.)
