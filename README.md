@@ -1,18 +1,12 @@
 # Gmail Automation with CrewAI 📧✨
-
-[![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UCApiD66gf36M9hZanbjgNaw?style=social)](https://www.youtube.com/@tonykipkemboi)
-[![GitHub followers](https://img.shields.io/github/followers/tonykipkemboi?style=social)](https://github.com/tonykipkemboi)
-[![Twitter Follow](https://img.shields.io/twitter/follow/tonykipkemboi?style=social)](https://twitter.com/tonykipkemboi)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat&logo=linkedin)](https://www.linkedin.com/in/tonykipkemboi/)
+[![GitHub followers](https://img.shields.io/github/followers/tonykipkemboi?style=social)](https://github.com/victorassisalves)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat&logo=linkedin)](https://www.linkedin.com/in/victorassisalves/)
 
 Gmail Automation with CrewAI is an intelligent email management system that uses AI agents to categorize, organize, respond to, and clean up your Gmail inbox automatically.
 
 ![Gmail Automation](./assets/gmail-automation.jpg)
 
 ## ✨ Features
-
-![Stars](https://img.shields.io/github/stars/tonykipkemboi/crewai-gmail-automation?style=social)
-![Last Commit](https://img.shields.io/github/last-commit/tonykipkemboi/crewai-gmail-automation) 
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen)
 
 - **📋 Email Categorization**: Automatically categorizes emails into specific types (newsletters, promotions, personal, etc.)
