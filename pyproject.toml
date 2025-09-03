@@ -9,6 +9,7 @@ dependencies = [
     "crewai[tools]>=0.102.0,<1.0.0",
     "fastapi>=0.111.0",
     "uvicorn>=0.29.0",
+    "python-dotenv>=1.0.1",
     "firebase-admin>=6.5.0",
     "google-cloud-firestore>=2.16.0",
     "google-cloud-secret-manager>=2.20.2",

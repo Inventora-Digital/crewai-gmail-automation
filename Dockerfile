@@ -26,5 +26,5 @@ RUN pip install --upgrade pip setuptools wheel \
 
 EXPOSE 8080
 
-CMD ["uvicorn", "gmail_crew_ai.server:app", "--host", "0.0.0.0", "--port", "8080"]
-
+# Run the server respecting Cloud Run's PORT env variable
+CMD ["python", "-m", "gmail_crew_ai.server"]

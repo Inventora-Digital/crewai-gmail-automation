@@ -419,8 +419,14 @@ async def start_run(payload: RunRequest, request: Request):
             # Non-fatal; fall through to explicit payload requirement
             pass
 
+    # Final fallback: allow environment defaults for headless/agent invocations
+    if not email_address:
+        email_address = os.environ.get("DEFAULT_EMAIL_ADDRESS", "").strip()
+    if not app_password:
+        app_password = os.environ.get("DEFAULT_APP_PASSWORD", "").strip()
+
     if not email_address or not app_password:
-        raise HTTPException(status_code=400, detail="email_address and app_password are required")
+        raise HTTPException(status_code=400, detail="email_address and app_password are required (or configure DEFAULT_EMAIL_ADDRESS/DEFAULT_APP_PASSWORD env vars)")
 
     rec = run_manager.create_run(email_address)
     t = threading.Thread(target=_run_crew_thread, args=(rec, app_password, email_limit, signature_name, signature_block), daemon=True)

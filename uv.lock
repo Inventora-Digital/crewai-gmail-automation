@@ -930,6 +930,7 @@ dependencies = [
     { name = "google-cloud-firestore" },
     { name = "google-cloud-kms" },
     { name = "google-cloud-secret-manager" },
+    { name = "python-dotenv" },
     { name = "uvicorn" },
 ]
 
@@ -942,6 +943,7 @@ requires-dist = [
     { name = "google-cloud-firestore", specifier = ">=2.16.0" },
     { name = "google-cloud-kms", specifier = ">=2.24.0" },
     { name = "google-cloud-secret-manager", specifier = ">=2.20.2" },
+    { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "uvicorn", specifier = ">=0.29.0" },
 ]
 

@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: Gmail Crew Automation Tool
+  version: 1.0.0
+  description: |
+    Tool API for starting and monitoring Gmail automation runs. Designed to be imported
+    into Vertex AI Agent Engine (Agent Builder) as an HTTP tool.
+
+servers:
+  - url: https://YOUR_CLOUD_RUN_URL
+    description: Cloud Run base URL (replace after deploy)
+
+paths:
+  /api/runs:
+    post:
+      operationId: startRun
+      summary: Start a new email-processing run
+      description: |
+        Starts the crew execution. Provide `email_address` and `app_password` unless the service is configured
+        with DEFAULT_EMAIL_ADDRESS/DEFAULT_APP_PASSWORD environment variables.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunRequest'
+      responses:
+        '200':
+          description: Run created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunCreated'
+        '400':
+          description: Missing credentials
+  /api/runs/{run_id}:
+    get:
+      operationId: getRun
+      summary: Get run status
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Run metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '404':
+          description: Not found
+  /api/runs/{run_id}/logs:
+    get:
+      operationId: getRunLogs
+      summary: Get run logs (tail-friendly)
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Logs batch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogsResponse'
+  /api/summary:
+    get:
+      operationId: getSummary
+      summary: Get a summary of key outputs
+      responses:
+        '200':
+          description: Summary of deleted/preserved emails and drafts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryResponse'
+  /health:
+    get:
+      operationId: health
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+components:
+  schemas:
+    RunRequest:
+      type: object
+      properties:
+        email_address:
+          type: string
+          description: Gmail address to process
+          example: user@example.com
+        app_password:
+          type: string
+          description: Gmail app password (or use DEFAULT_APP_PASSWORD env)
+          example: abcd efgh ijkl mnop
+        email_limit:
+          type: integer
+          description: Number of emails to process
+          default: 5
+      required: [email_limit]
+    RunCreated:
+      type: object
+      properties:
+        run_id:
+          type: string
+        status:
+          type: string
+          enum: [running, completed, failed]
+        started_at:
+          type: string
+          format: date-time
+    Run:
+      type: object
+      properties:
+        id: { type: string }
+        email_address: { type: string, description: "Masked email" }
+        status: { type: string, enum: [running, completed, failed] }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time, nullable: true }
+        return_code: { type: integer, nullable: true }
+        log_lines: { type: integer }
+    LogsResponse:
+      type: object
+      properties:
+        start: { type: integer }
+        next: { type: integer }
+        status: { type: string }
+        lines:
+          type: array
+          items: { type: string }
+    SummaryResponse:
+      type: object
+      properties:
+        deleted:
+          type: array
+          items:
+            type: object
+            properties:
+              email_id: { type: string }
+              subject: { type: string }
+              sender: { type: string }
+              age_days: { type: integer }
+              reason: { type: string }
+              category: { type: string }
+              priority: { type: string }
+        not_deleted:
+          type: array
+          items:
+            type: object
+            properties:
+              email_id: { type: string }
+              subject: { type: string }
+              sender: { type: string }
+              age_days: { type: integer }
+              reason: { type: string }
+              category: { type: string }
+              priority: { type: string }
+        drafts:
+          type: array
+          items:
+            type: object
+            properties:
+              email_id: { type: string }
+              subject: { type: string }
+              recipient: { type: string }
+              response_summary: { type: string }
+              draft_saved: { type: boolean }
+

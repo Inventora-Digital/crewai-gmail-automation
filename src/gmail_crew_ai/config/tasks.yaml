@@ -67,10 +67,9 @@ organization_task:
     
     Simplified Label Rules:
     
-    1. For YOUTUBE emails:
-       - Add "YOUTUBE" label
-       - Star the email
-       - If HIGH priority, also add "URGENT" label
+    1. For Client emails:
+       - Add "CLIENT" label
+       - Mark as a MEDIUM or HIGH priority
     
     2. For NEWSLETTERS emails:
        - Add "NEWSLETTERS" label
@@ -81,7 +80,7 @@ organization_task:
        - Add a label matching the category (e.g., "GITHUB")
        - If HIGH priority, add "URGENT" label and star the email
        - If MEDIUM priority, add "ACTION_NEEDED" label
-       - If is notification or no-reply, just set as READ_ONLY and DO NOT answer or create draft
+       - If is notification, alerts, não responda or no-reply, just set as READ_ONLY and DO NOT answer or create draft
     
     4. For other emails:
        - Add a label matching the category (e.g., "PERSONAL", "OTHERS")
@@ -101,8 +100,6 @@ organization_task:
     - Whether the email was starred
     - The result of the organization attempt
 
-    The report should include special handling for YOUTUBE and NEWSLETTERS emails to ensure they receive
-    the appropriate labels and priority indicators.
   agent: organizer
   context: [categorization_task]
   output_file: output/organization_report.json
@@ -113,7 +110,7 @@ response_task:
     Based on the categorization report, generate responses ONLY for emails that require action.
 
     Only generate responses for:
-    - PERSONAL emails with HIGH or MEDIUM priority
+    - PERSONAL or CLIENT emails with HIGH or MEDIUM priority
 
     For each response to generate, produce a draft plan with:
     - email_id
